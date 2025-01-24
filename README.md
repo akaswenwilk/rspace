@@ -11,18 +11,14 @@
 starts wizard to create and change to new space.  Determined by spaces in $HOME/.spaces.yml file: e.g.
 
 ```
-repos:
-  - my-awesome-repo-1
-  - my-awesome-repo-2
-  - my-awesome-repo-3
+username:
+    my-token:
+        - my-awesome-repo-1
+        - my-awesome-repo-2
+        - my-awesome-repo-3
 ```
 
-Authentication happens through username and token stored as the following env variables:
-
-```
-export GIT_USERNAME="some-username"
-export GIT_PASSWORD="some-token-or-password"
-```
+can change location of the file by setting the following env variable: `$SPACES_CONFIG`
 
 path to the directory will be stored in clipboard for easy navigation afterwards
 
