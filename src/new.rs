@@ -33,6 +33,8 @@ pub struct App {
 
     repos_list: ReposList,
 
+    existing_spaces_list: ExistingSpacesList,
+
     exit: bool,
     ready_to_clone: bool,
 }
@@ -59,6 +61,12 @@ impl ReposList {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct ExistingSpacesList {
+    matched_spaces: Vec<String>,
+    state: ListState,
+}
+
 #[derive(Debug, Clone)]
 enum AppState {
     Repo,
@@ -76,9 +84,10 @@ impl App {
             selected_branch: String::new(),
             selected_base_branch: String::new(),
             state: AppState::Repo,
-            repos_list: repos_list,
             exit: false,
             ready_to_clone: false,
+            repos_list,
+            existing_spaces_list: ExistingSpacesList::default(),
         }
     }
     pub fn run(mut self, terminal: &mut DefaultTerminal) -> Result<String, error::CustomError> {
@@ -125,6 +134,7 @@ impl App {
                 }
                 AppState::Branch => {
                     self.selected_branch.push(ch);
+                    self.determine_matched_spaces();
                 }
                 AppState::BaseBranch => {
                     self.selected_base_branch.push(ch);
@@ -144,9 +154,15 @@ impl App {
                     self.selected_base_branch.pop();
                 }
             },
-            KeyCode::Down | KeyCode::Tab => {
-                self.repos_list.state.select_next();
-            }
+            KeyCode::Down | KeyCode::Tab => match self.state {
+                AppState::Repo => {
+                    self.repos_list.state.select_next();
+                }
+                AppState::Branch => {
+                    self.existing_spaces_list.state.select_next();
+                }
+                _ => {}
+            },
             KeyCode::Up => {
                 self.repos_list.state.select_previous();
             }
@@ -167,6 +183,7 @@ impl App {
                 if let Some(i) = self.repos_list.state.selected() {
                     self.selected_repo = self.repos_list.matched_repos[i].name.clone();
                 }
+                self.determine_matched_spaces();
                 AppState::Branch
             }
             AppState::Branch => {
@@ -195,6 +212,29 @@ impl App {
             .cloned()
             .collect();
         self.repos_list.state.select(None);
+    }
+
+    fn determine_matched_spaces(&mut self) {
+        let matcher = SkimMatcherV2::default();
+        let selected_branch = self.selected_branch.clone();
+
+        let selected_repo = self.selected_repo.clone();
+        let mut split_repo = selected_repo.split('/').collect::<Vec<&str>>();
+
+        let repo = split_repo.pop().unwrap().replace(".git", "");
+        let owner = split_repo.pop().unwrap();
+
+        let default = Vec::new();
+        let spaces = self.conf.current_spaces.get(owner).unwrap_or(&default);
+
+        let matched_input = format!("{}-{}", repo, selected_branch);
+        self.existing_spaces_list.matched_spaces = spaces
+            .iter()
+            .filter(|s| matcher.fuzzy_match(s, &matched_input).is_some())
+            .cloned()
+            .collect();
+
+        self.existing_spaces_list.state.select(None);
     }
 }
 
@@ -243,8 +283,20 @@ impl App {
     }
 
     fn render_list(&mut self, area: Rect, buf: &mut Buffer) {
+        match self.state {
+            AppState::Repo => {
+                self.render_repos_list(area, buf);
+            }
+            AppState::Branch => {
+                self.render_existing_spaces_list(area, buf);
+            }
+            _ => {}
+        }
+    }
+
+    fn render_repos_list(&mut self, area: Rect, buf: &mut Buffer) {
         let block = Block::bordered()
-            .title(Line::from("Spaces".bold()))
+            .title(Line::from("Repos".bold()))
             .border_set(border::THICK);
 
         let items: Vec<ListItem> = self
@@ -258,5 +310,28 @@ impl App {
         let list = List::new(items).block(block).highlight_symbol(">");
 
         StatefulWidget::render(list, area, buf, &mut self.repos_list.state.clone());
+    }
+
+    fn render_existing_spaces_list(&mut self, area: Rect, buf: &mut Buffer) {
+        let block = Block::bordered()
+            .title(Line::from("Current Spaces".bold()))
+            .border_set(border::THICK);
+
+        let items: Vec<ListItem> = self
+            .existing_spaces_list
+            .matched_spaces
+            .iter()
+            .enumerate()
+            .map(|(_i, space)| ListItem::from(Text::raw(space.clone())))
+            .collect();
+
+        let list = List::new(items).block(block).highlight_symbol(">");
+
+        StatefulWidget::render(
+            list,
+            area,
+            buf,
+            &mut self.existing_spaces_list.state.clone(),
+        );
     }
 }
