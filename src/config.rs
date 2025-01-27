@@ -3,7 +3,6 @@ use std::{env, fs};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
-    #[serde(default)]
     pub config: SpaceConfig,
     pub repos: ReposList,
 }
@@ -12,30 +11,20 @@ pub struct Config {
 pub struct SpaceConfig {
     #[serde(default = "default_spaces_dir")]
     pub spaces_dir: String,
+    #[serde(default = "master")]
+    pub default_branch: String,
+    pub default_username: String,
+    pub default_token: String,
 }
 
-impl Default for SpaceConfig {
-    fn default() -> Self {
-        SpaceConfig {
-            spaces_dir: default_spaces_dir(),
-        }
-    }
-}
-
-pub type ReposList = Vec<RepoList>;
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct RepoList {
-    pub username: String,
-    pub token: String,
-    pub repos: Vec<Repo>,
-}
+pub type ReposList = Vec<Repo>;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Repo {
     pub name: String,
-    #[serde(default = "master")]
-    pub default_branch: String,
+    pub default_branch: Option<String>,
+    pub username: Option<String>,
+    pub token: Option<String>,
 }
 
 pub fn load() -> Config {

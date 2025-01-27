@@ -1,4 +1,4 @@
-use crate::{clone, config};
+use crate::{clone, config, error};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
@@ -14,7 +14,7 @@ use ratatui::{
 };
 use std::io;
 
-pub fn run(conf: config::Config) -> Result<String, io::Error> {
+pub fn run(conf: config::Config) -> Result<String, error::CustomError> {
     let mut terminal = ratatui::init();
     let app_result = App::new(conf).run(&mut terminal);
     ratatui::restore();
@@ -47,12 +47,7 @@ pub struct ReposList {
 
 impl ReposList {
     fn new(conf: &config::Config) -> Self {
-        let available_repos: Vec<config::Repo> = conf
-            .repos
-            .iter()
-            .map(|r| r.repos.clone())
-            .flatten()
-            .collect();
+        let available_repos: Vec<config::Repo> = conf.repos.clone();
 
         let matched_repos = available_repos.clone();
 
@@ -86,7 +81,7 @@ impl App {
             ready_to_clone: false,
         }
     }
-    pub fn run(mut self, terminal: &mut DefaultTerminal) -> io::Result<String> {
+    pub fn run(mut self, terminal: &mut DefaultTerminal) -> Result<String, error::CustomError> {
         let message = String::new();
         while !self.exit {
             terminal.draw(|frame| frame.render_widget(&mut self, frame.area()))?;

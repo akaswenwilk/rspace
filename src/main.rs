@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 pub mod clone;
 pub mod config;
+pub mod error;
 pub mod new;
 pub mod purge;
 
