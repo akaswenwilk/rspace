@@ -1,4 +1,4 @@
-use crate::config;
+use crate::{clone, config};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
@@ -14,7 +14,7 @@ use ratatui::{
 };
 use std::io;
 
-pub fn run(conf: config::Config) -> Result<(), io::Error> {
+pub fn run(conf: config::Config) -> Result<String, io::Error> {
     let mut terminal = ratatui::init();
     let app_result = App::new(conf).run(&mut terminal);
     ratatui::restore();
@@ -34,19 +34,20 @@ pub struct App {
     repos_list: ReposList,
 
     exit: bool,
+    ready_to_clone: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct ReposList {
-    available_repos: Vec<String>,
+    available_repos: Vec<config::Repo>,
 
-    matched_repos: Vec<String>,
+    matched_repos: Vec<config::Repo>,
     state: ListState,
 }
 
 impl ReposList {
     fn new(conf: &config::Config) -> Self {
-        let available_repos: Vec<String> = conf
+        let available_repos: Vec<config::Repo> = conf
             .repos
             .iter()
             .map(|r| r.repos.clone())
@@ -82,14 +83,24 @@ impl App {
             state: AppState::Repo,
             repos_list: repos_list,
             exit: false,
+            ready_to_clone: false,
         }
     }
-    pub fn run(mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
+    pub fn run(mut self, terminal: &mut DefaultTerminal) -> io::Result<String> {
+        let message = String::new();
         while !self.exit {
             terminal.draw(|frame| frame.render_widget(&mut self, frame.area()))?;
             self.handle_events()?;
         }
-        Ok(())
+        if self.ready_to_clone {
+            return clone::clone(
+                self.conf,
+                self.selected_repo,
+                self.selected_branch,
+                self.selected_base_branch,
+            );
+        }
+        Ok(message)
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
@@ -107,6 +118,7 @@ impl App {
             && key_event.code == KeyCode::Char('c')
         {
             self.exit();
+            self.ready_to_clone = false;
             return;
         }
 
@@ -158,13 +170,20 @@ impl App {
         self.state = match self.state {
             AppState::Repo => {
                 if let Some(i) = self.repos_list.state.selected() {
-                    self.selected_repo = self.repos_list.matched_repos[i].clone();
+                    self.selected_repo = self.repos_list.matched_repos[i].name.clone();
                 }
                 AppState::Branch
             }
-            AppState::Branch => AppState::BaseBranch,
+            AppState::Branch => {
+                if self.selected_branch.is_empty() {
+                    self.exit();
+                    self.ready_to_clone = true;
+                }
+                AppState::BaseBranch
+            }
             AppState::BaseBranch => {
                 self.exit();
+                self.ready_to_clone = true;
                 AppState::BaseBranch
             }
         }
@@ -177,7 +196,7 @@ impl App {
             .repos_list
             .available_repos
             .iter()
-            .filter(|r| matcher.fuzzy_match(r, &selected_repo).is_some())
+            .filter(|r| matcher.fuzzy_match(&r.name, &selected_repo).is_some())
             .cloned()
             .collect();
         self.repos_list.state.select(None);
@@ -238,7 +257,7 @@ impl App {
             .matched_repos
             .iter()
             .enumerate()
-            .map(|(_i, repo)| ListItem::from(Text::raw(repo)))
+            .map(|(_i, repo)| ListItem::from(Text::raw(repo.name.clone())))
             .collect();
 
         let list = List::new(items).block(block).highlight_symbol(">");

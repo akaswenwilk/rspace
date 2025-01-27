@@ -31,7 +31,12 @@ pub struct RepoList {
     pub repos: Vec<Repo>,
 }
 
-pub type Repo = String;
+#[derive(Debug, Deserialize, Clone)]
+pub struct Repo {
+    pub name: String,
+    #[serde(default = "master")]
+    pub default_branch: String,
+}
 
 pub fn load() -> Config {
     let spaces_file = env::var("SPACES_CONFIG").unwrap_or(default_spaces_file());
@@ -53,4 +58,8 @@ fn default_spaces_dir() -> String {
     let home = dirs::home_dir().unwrap();
     let spaces_dir = home.join(DEFAULT_SPACES_DIR);
     spaces_dir.to_str().unwrap().to_string()
+}
+
+fn master() -> String {
+    "master".to_string()
 }

@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+pub mod clone;
 pub mod config;
 pub mod new;
 pub mod purge;
@@ -26,8 +27,14 @@ fn main() {
         Commands::Purge => purge::run(conf),
     };
 
-    if let Err(e) = res {
-        eprintln!("Error: {}", e);
-        std::process::exit(1);
+    match res {
+        Ok(s) => {
+            println!("{}", s);
+            std::process::exit(0);
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            std::process::exit(1);
+        }
     }
 }
