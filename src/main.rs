@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
+pub mod config;
 pub mod new;
 pub mod purge;
-pub mod config;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -21,8 +21,13 @@ fn main() {
 
     let conf = config::load();
 
-    match args.cmd {
+    let res = match args.cmd {
         Commands::New => new::run(conf),
         Commands::Purge => purge::run(conf),
+    };
+
+    if let Err(e) = res {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
     }
 }

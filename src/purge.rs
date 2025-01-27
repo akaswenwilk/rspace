@@ -1,11 +1,7 @@
 use crate::config;
-use std::fs;
+use std::{fs, io};
 
-pub fn run(conf: config::Config) {
-    if fs::read_dir(conf.config.spaces_dir.clone()).is_err() {
-        println!("no spaces found in {:?}", conf.config.spaces_dir);
-        return;
-    }
-    fs::remove_dir_all(conf.config.spaces_dir.clone()).unwrap();
-    println!("all spaces in {:?} purged successfully", conf.config.spaces_dir);
+pub fn run(conf: config::Config) -> Result<(), io::Error> {
+    fs::read_dir(conf.config.spaces_dir.clone())?;
+    fs::remove_dir_all(conf.config.spaces_dir.clone())
 }
