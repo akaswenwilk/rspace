@@ -187,6 +187,11 @@ impl App {
                 AppState::Branch
             }
             AppState::Branch => {
+                if let Some(i) = self.existing_spaces_list.state.selected() {
+                    self.selected_branch = self.get_selected_branch(i);
+                    self.exit();
+                    self.ready_to_clone = true;
+                }
                 if self.selected_branch.is_empty() {
                     self.exit();
                     self.ready_to_clone = true;
@@ -235,6 +240,20 @@ impl App {
             .collect();
 
         self.existing_spaces_list.state.select(None);
+    }
+
+    fn get_selected_branch(&self, i: usize) -> String {
+        let selected_repo = self.selected_repo.clone();
+        let repo_name = selected_repo
+            .split('/')
+            .collect::<Vec<&str>>()
+            .pop()
+            .unwrap()
+            .replace(".git", "");
+        let repo_name = format!("{}-", repo_name);
+        self.existing_spaces_list.matched_spaces[i]
+            .clone()
+            .replace(&repo_name, "")
     }
 }
 
