@@ -41,8 +41,8 @@ pub fn clone(
     ctx.set_contents(destination_path.clone()).unwrap();
 
     message.push_str(&format!(
-        "Cloned into {}\n {} {}",
-        destination_path, repo_url, branch_name
+        "Cloned into {}",
+        destination_path
     ));
 
     return Ok(message);

@@ -163,9 +163,15 @@ impl App {
                 }
                 _ => {}
             },
-            KeyCode::Up => {
-                self.repos_list.state.select_previous();
-            }
+            KeyCode::Up | KeyCode::BackTab => match self.state {
+                AppState::Repo => {
+                    self.repos_list.state.select_previous();
+                }
+                AppState::Branch => {
+                    self.existing_spaces_list.state.select_previous();
+                }
+                _ => {}
+            },
             KeyCode::Esc => {
                 self.repos_list.state.select(None);
             }
