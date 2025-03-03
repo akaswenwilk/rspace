@@ -118,11 +118,28 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
-        if key_event.modifiers.contains(event::KeyModifiers::CONTROL)
-            && key_event.code == KeyCode::Char('c')
-        {
-            self.exit();
-            self.ready_to_clone = false;
+        if key_event.modifiers.contains(event::KeyModifiers::CONTROL) {
+            match key_event.code {
+                KeyCode::Char('c') => {
+                    self.exit();
+                    self.ready_to_clone = false;
+                    return;
+                }
+                KeyCode::Char('u') => match self.state {
+                    AppState::Repo => {
+                        self.selected_repo.clear();
+                        self.determine_matched_repos();
+                    }
+                    AppState::Branch => {
+                        self.selected_branch.clear();
+                        self.determine_matched_spaces();
+                    }
+                    AppState::BaseBranch => {
+                        self.selected_base_branch.clear();
+                    }
+                },
+                _ => {}
+            }
             return;
         }
 
@@ -146,9 +163,11 @@ impl App {
             KeyCode::Backspace => match self.state {
                 AppState::Repo => {
                     self.selected_repo.pop();
+                    self.determine_matched_repos();
                 }
                 AppState::Branch => {
                     self.selected_branch.pop();
+                    self.determine_matched_spaces();
                 }
                 AppState::BaseBranch => {
                     self.selected_base_branch.pop();
